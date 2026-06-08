@@ -1,13 +1,892 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pneumoscan AI</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PneumoScan AI - FUOYE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;color:#0d1b2a;background:#f7faff;padding-top:64px;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:#f0f4f8;}
+::-webkit-scrollbar-thumb{background:#1565c0;border-radius:3px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+@keyframes scanLine{0%{top:0%;}100%{top:100%;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* NAV */
+nav{
+position:fixed;top:0;left:0;right:0;z-index:9999;
+background:#0a1628;
+border-bottom:2px solid #1a3560;
+display:flex;align-items:center;justify-content:space-between;
+padding:0 40px;height:64px;
+box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+.nav-logo{display:flex;align-items:center;gap:12px;cursor:pointer;}
+.nav-icon{width:36px;height:36px;border-radius:8px;
+background:linear-gradient(135deg,#0288d1,#1565c0);
+display:flex;align-items:center;justify-content:center;font-size:18px;}
+.nav-title{color:#fff;font-family:‘Playfair Display’,serif;font-size:17px;font-weight:700;}
+.nav-sub{color:#a0b4c8;font-size:9px;letter-spacing:2px;text-transform:uppercase;}
+.nav-links{display:flex;gap:4px;align-items:center;}
+.nav-links button{
+background:none;border:none;color:#a0b4c8;
+font-size:13px;padding:8px 14px;border-radius:6px;
+cursor:pointer;font-family:‘Inter’,sans-serif;
+transition:all .2s;
+}
+.nav-links button:hover{color:#fff;background:rgba(255,255,255,.1);}
+.nav-cta{
+background:linear-gradient(135deg,#0288d1,#1565c0) !important;
+color:#fff !important;padding:8px 20px !important;
+border-radius:6px !important;font-weight:600 !important;
+}
+.nav-cta:hover{filter:brightness(1.1);}
+
+/* HERO */
+#hero{
+background:linear-gradient(160deg,#0a1628 0%,#112240 55%,#1a3560 100%);
+min-height:calc(100vh - 64px);
+display:flex;align-items:center;
+position:relative;overflow:hidden;
+}
+.hero-grid{position:absolute;inset:0;
+background-image:linear-gradient(rgba(26,53,96,.2) 1px,transparent 1px),
+linear-gradient(90deg,rgba(26,53,96,.2) 1px,transparent 1px);
+background-size:48px 48px;pointer-events:none;}
+.hero-inner{max-width:1100px;margin:0 auto;padding:80px 40px;
+display:grid;grid-template-columns:1fr 1fr;gap:64px;
+align-items:center;position:relative;z-index:1;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;
+background:rgba(2,136,209,.15);border:1px solid rgba(2,136,209,.3);
+border-radius:20px;padding:6px 14px;margin-bottom:28px;}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;
+background:#0288d1;animation:pulse 2s infinite;}
+.hero-badge span{color:#b3e0f7;font-size:11px;letter-spacing:2px;text-transform:uppercase;}
+.hero-title{font-family:‘Playfair Display’,serif;
+font-size:clamp(36px,4.5vw,58px);font-weight:700;
+color:#fff;line-height:1.1;letter-spacing:-1.5px;margin-bottom:20px;}
+.hero-title span{color:#0288d1;}
+.hero-desc{color:#a0b4c8;font-size:15px;line-height:1.9;margin-bottom:36px;max-width:480px;}
+.hero-desc strong{color:#fff;}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;}
+.btn-primary{
+background:linear-gradient(135deg,#0288d1,#1565c0);
+border:none;color:#fff;padding:14px 28px;border-radius:8px;
+font-size:14px;font-weight:600;cursor:pointer;
+transition:all .2s;letter-spacing:.3px;font-family:‘Inter’,sans-serif;
+}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-ghost{
+background:transparent;border:1px solid #1a3560;
+color:#a0b4c8;padding:14px 28px;border-radius:8px;
+font-size:14px;cursor:pointer;transition:all .2s;
+font-family:‘Inter’,sans-serif;
+}
+.btn-ghost:hover{background:#e3f0ff;color:#0a1628;}
+.hero-stats{display:flex;gap:32px;margin-top:48px;padding-top:32px;
+border-top:1px solid #1a3560;flex-wrap:wrap;}
+.hero-stat-val{color:#fff;font-family:‘Playfair Display’,serif;font-size:22px;font-weight:700;}
+.hero-stat-lbl{color:#6b7e90;font-size:11px;letter-spacing:1px;margin-top:2px;}
+.hero-card{width:300px;background:rgba(255,255,255,.04);
+border:1px solid #1a3560;border-radius:16px;padding:24px;}
+.hero-card-img{background:#112240;border-radius:10px;height:240px;
+display:flex;align-items:center;justify-content:center;
+position:relative;overflow:hidden;margin-bottom:16px;border:1px solid #1a3560;}
+.hero-card-img span{font-size:80px;filter:grayscale(1) brightness(.7);opacity:.6;}
+.scan-line{position:absolute;left:0;right:0;height:2px;
+background:linear-gradient(90deg,transparent,#0288d1,transparent);
+animation:scanLine 2.5s ease-in-out infinite;opacity:.7;}
+
+/* SECTIONS */
+section{padding:96px 40px;}
+.section-inner{max-width:1100px;margin:0 auto;}
+.section-header{text-align:center;max-width:640px;margin:0 auto 48px;}
+.section-tag{display:inline-block;background:#e3f0ff;color:#1565c0;
+font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+padding:5px 14px;border-radius:20px;margin-bottom:16px;}
+.section-title{font-family:‘Playfair Display’,serif;
+font-size:clamp(26px,3vw,38px);font-weight:700;
+color:#0a1628;letter-spacing:-1px;margin-bottom:12px;}
+.section-sub{color:#6b7e90;font-size:15px;line-height:1.8;}
+
+/* SCANNER */
+#scanner{background:#f7faff;border-top:1px solid #dce6f0;}
+.scanner-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+.card{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:20px;}
+.card:last-child{margin-bottom:0;}
+.card-title{font-weight:700;font-size:13px;color:#0a1628;margin-bottom:16px;}
+.status-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.status-indicator{display:flex;align-items:center;gap:6px;font-size:12px;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-inactive{background:#a0b4c8;}
+.dot-active{background:#1b7a3e;}
+.dot-loading{background:#0288d1;animation:pulse 1s infinite;}
+.model-ok{background:#e6f4ec;border:1px solid rgba(27,122,62,.2);
+border-radius:8px;padding:10px 14px;font-size:12px;color:#1b7a3e;margin-bottom:0;}
+.model-hint{font-size:12px;color:#6b7e90;margin-bottom:14px;line-height:1.6;}
+.load-label{
+display:block;text-align:center;padding:11px;
+background:#0a1628;color:#fff;border-radius:8px;
+font-size:12px;font-weight:600;letter-spacing:.5px;
+cursor:pointer;transition:all .2s;border:none;width:100%;
+font-family:‘Inter’,sans-serif;
+}
+.load-label:hover{background:#1a3560;}
+.dropzone{
+border:2px dashed #dce6f0;border-radius:10px;
+padding:40px 16px;text-align:center;
+cursor:pointer;background:#f0f4f8;transition:all .2s;
+min-height:160px;
+}
+.dropzone:hover{border-color:#1565c0;background:#e3f0ff;}
+.dropzone.drag{border-color:#1565c0;background:#e3f0ff;}
+.dropzone-icon{font-size:40px;margin-bottom:12px;}
+.dropzone p{color:#6b7e90;font-size:13px;line-height:1.7;}
+.dropzone p strong{color:#0a1628;}
+.dropzone small{color:#a0b4c8;font-size:11px;display:block;margin-top:8px;}
+.preview-img{max-width:100%;max-height:220px;border-radius:8px;
+display:block;margin:0 auto;filter:grayscale(.2);border:1px solid #dce6f0;}
+.remove-btn{
+display:block;margin:12px auto 0;background:#fff;
+border:1px solid #a0b4c8;color:#6b7e90;padding:5px 16px;
+border-radius:6px;font-size:11px;cursor:pointer;
+font-family:‘Inter’,sans-serif;
+}
+.remove-btn:hover{background:#f0f4f8;}
+.analyze-btn{
+display:block;width:100%;margin-top:16px;padding:14px;
+background:linear-gradient(135deg,#0288d1,#1565c0);
+border:none;border-radius:8px;color:#fff;
+font-size:13px;font-weight:700;letter-spacing:1px;
+cursor:pointer;transition:all .2s;font-family:‘Inter’,sans-serif;
+}
+.analyze-btn:hover{filter:brightness(1.1);}
+.analyze-btn:disabled{background:#dce6f0;color:#a0b4c8;cursor:not-allowed;}
+.error-box{background:#fdecea;border:1px solid rgba(183,28,28,.2);
+border-radius:8px;padding:12px 16px;font-size:12px;
+color:#b71c1c;margin-top:16px;display:none;}
+
+/* RESULT PANEL */
+.result-empty{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+padding:48px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.result-empty-icon{font-size:64px;opacity:.2;margin-bottom:20px;}
+.result-empty-text{color:#a0b4c8;font-size:14px;line-height:1.7;}
+.loading-card{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+padding:48px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.spinner{width:48px;height:48px;border:3px solid #dce6f0;
+border-top:3px solid #1565c0;border-radius:50%;
+margin:0 auto 20px;animation:spin 1s linear infinite;}
+.result-card{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);
+animation:fadeUp .4s ease forwards;}
+.result-head-pneumonia{background:linear-gradient(135deg,#b71c1c,#c62828);padding:24px 28px;}
+.result-head-normal{background:linear-gradient(135deg,#1b7a3e,#145a32);padding:24px 28px;}
+.result-lbl{color:rgba(255,255,255,.7);font-size:10px;
+letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
+.result-row{display:flex;align-items:center;justify-content:space-between;}
+.result-verdict{color:#fff;font-family:‘Playfair Display’,serif;font-size:26px;font-weight:700;}
+.result-pill{background:rgba(255,255,255,.2);border-radius:20px;
+padding:6px 14px;color:#fff;font-size:13px;font-weight:600;}
+.result-body{padding:28px;}
+.bar-row{display:flex;justify-content:space-between;
+font-size:11px;color:#6b7e90;margin-bottom:6px;}
+.bar-track{height:8px;background:#dce6f0;border-radius:4px;overflow:hidden;margin-bottom:24px;}
+.bar-fill-p{height:100%;border-radius:4px;background:linear-gradient(90deg,#b71c1c,#c62828);transition:width 1s ease;}
+.bar-fill-n{height:100%;border-radius:4px;background:linear-gradient(90deg,#1b7a3e,#145a32);transition:width 1s ease;}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+.score-box{border:1px solid #dce6f0;border-radius:8px;padding:14px 16px;}
+.score-box-active{border-color:#1565c0;background:#f0f4f8;}
+.score-lbl{font-size:11px;color:#6b7e90;margin-bottom:4px;}
+.score-val-active{font-size:20px;font-weight:700;font-family:‘Playfair Display’,serif;color:#1565c0;}
+.score-val-dim{font-size:20px;font-weight:700;font-family:‘Playfair Display’,serif;color:#a0b4c8;}
+.minfo{background:#f0f4f8;border-radius:8px;padding:16px;margin-bottom:20px;}
+.minfo-title{font-size:11px;font-weight:700;color:#0a1628;
+letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.minfo-row{display:flex;justify-content:space-between;
+padding:5px 0;border-bottom:1px solid #dce6f0;font-size:12px;}
+.minfo-row:last-child{border-bottom:none;}
+.minfo-k{color:#6b7e90;}
+.minfo-v{color:#0a1628;font-weight:500;}
+.rec-p{background:#fdecea;border:1px solid rgba(183,28,28,.2);border-radius:8px;padding:14px 16px;}
+.rec-n{background:#e6f4ec;border:1px solid rgba(27,122,62,.2);border-radius:8px;padding:14px 16px;}
+.rec-title-p{font-size:11px;font-weight:700;text-transform:uppercase;
+letter-spacing:1px;margin-bottom:6px;color:#b71c1c;}
+.rec-title-n{font-size:11px;font-weight:700;text-transform:uppercase;
+letter-spacing:1px;margin-bottom:6px;color:#1b7a3e;}
+.rec-text{font-size:12px;line-height:1.7;color:#374151;}
+.disclaimer{font-size:10px;color:#a0b4c8;margin-top:16px;line-height:1.6;font-style:italic;}
+
+/* ABOUT */
+#about{background:#fff;border-top:1px solid #dce6f0;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:48px;}
+.about-h{font-family:‘Playfair Display’,serif;font-size:20px;
+font-weight:700;color:#0a1628;margin-bottom:16px;}
+.about-p{color:#6b7e90;font-size:14px;line-height:1.9;margin-bottom:16px;}
+.about-p strong{color:#0a1628;}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:64px;}
+.step{text-align:center;padding:0 12px;position:relative;}
+.step-line{position:absolute;top:24px;right:0;width:50%;height:2px;background:#dce6f0;}
+.step-circle{width:48px;height:48px;border-radius:50%;
+background:linear-gradient(135deg,#0288d1,#1565c0);
+display:flex;align-items:center;justify-content:center;
+font-size:20px;margin:0 auto 12px;position:relative;z-index:1;}
+.step-num{font-size:10px;color:#0288d1;font-weight:700;letter-spacing:2px;margin-bottom:6px;}
+.step-title{font-weight:700;color:#0a1628;font-size:13px;margin-bottom:6px;}
+.step-desc{color:#6b7e90;font-size:11px;line-height:1.6;}
+
+/* METRICS */
+#metrics{background:#f7faff;border-top:1px solid #dce6f0;}
+.metrics-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:40px;}
+.metric-card{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+padding:24px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.metric-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(10,22,40,.12);}
+.metric-icon{font-size:28px;margin-bottom:12px;}
+.metric-val{font-family:‘Playfair Display’,serif;font-size:28px;
+font-weight:700;color:#0a1628;letter-spacing:-1px;}
+.metric-name{font-weight:600;color:#1565c0;font-size:12px;margin:4px 0;}
+.metric-sub{color:#a0b4c8;font-size:11px;}
+.table-wrap{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:32px;}
+.table-head{padding:20px 28px;border-bottom:1px solid #dce6f0;
+font-weight:700;color:#0a1628;font-size:14px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{padding:12px 16px;text-align:left;color:#6b7e90;font-weight:600;
+font-size:11px;letter-spacing:1px;text-transform:uppercase;
+background:#f0f4f8;border-bottom:1px solid #dce6f0;}
+td{padding:14px 16px;}
+tr.best-row{background:#e3f0ff;border-left:4px solid #1565c0;}
+tr:not(.best-row):nth-child(even){background:#f0f4f8;}
+.best-badge{margin-left:6px;font-size:10px;background:#1565c0;
+color:#fff;border-radius:4px;padding:1px 6px;}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.matrix-card{background:#fff;border:1px solid #dce6f0;
+border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.matrix-title{font-weight:700;color:#0a1628;margin-bottom:20px;font-size:14px;}
+.matrix-table{width:100%;border-collapse:collapse;text-align:center;font-size:13px;}
+.matrix-table th{padding:8px;color:#6b7e90;font-weight:500;background:transparent;
+border:none;text-transform:none;letter-spacing:0;font-size:13px;}
+.matrix-table td{padding:12px;}
+.cell-tp,.cell-tn{background:#e6f4ec;border:1px solid rgba(27,122,62,.2);
+border-radius:6px;font-weight:700;color:#1b7a3e;font-size:22px;}
+.cell-fp,.cell-fn{background:#fdecea;border:1px solid rgba(183,28,28,.2);
+border-radius:6px;font-weight:700;color:#b71c1c;font-size:22px;}
+.cell-lbl{color:#6b7e90;font-weight:500;text-align:left;}
+.findings-card{background:#fff;border:1px solid #dce6f0;
+border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.finding{border-radius:8px;padding:12px 16px;margin-bottom:12px;}
+.finding-s{background:#e6f4ec;border:1px solid rgba(27,122,62,.2);}
+.finding-b{background:#e3f0ff;border:1px solid rgba(21,101,192,.2);}
+.finding-w{background:#fff3e0;border:1px solid rgba(230,81,0,.2);}
+.finding-title-s{font-weight:700;font-size:12px;color:#1b7a3e;margin-bottom:4px;}
+.finding-title-b{font-weight:700;font-size:12px;color:#1565c0;margin-bottom:4px;}
+.finding-title-w{font-weight:700;font-size:12px;color:#e65100;margin-bottom:4px;}
+.finding-desc{font-size:12px;color:#6b7e90;line-height:1.6;}
+
+/* RESEARCH */
+#research{background:#fff;border-top:1px solid #dce6f0;}
+.ref-item{padding:14px 16px;border-radius:8px;margin-bottom:8px;
+border:1px solid #dce6f0;transition:all .2s;}
+.ref-item:hover{background:#e3f0ff;}
+.ref-top{display:flex;justify-content:space-between;
+margin-bottom:4px;align-items:flex-start;gap:8px;}
+.ref-author{font-weight:700;color:#0a1628;font-size:13px;}
+.ref-badge{background:#e3f0ff;color:#1565c0;font-size:10px;
+font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap;flex-shrink:0;}
+.ref-title{color:#6b7e90;font-size:12px;line-height:1.5;}
+.dataset-card{background:#f0f4f8;border:1px solid #dce6f0;
+border-radius:12px;padding:24px;margin-bottom:20px;}
+.dataset-title{font-weight:700;color:#0a1628;margin-bottom:16px;}
+.data-row{display:flex;justify-content:space-between;
+padding:8px 0;border-bottom:1px solid #dce6f0;font-size:13px;}
+.data-row:last-child{border-bottom:none;}
+.data-k{color:#6b7e90;}
+.data-v{font-weight:600;color:#0a1628;}
+.arch-card{background:#e3f0ff;border:1px solid rgba(21,101,192,.2);border-radius:12px;padding:20px;}
+.arch-title{font-weight:700;color:#0a1628;font-size:13px;margin-bottom:12px;}
+.arch-row{padding:8px 0;border-bottom:1px solid rgba(21,101,192,.15);font-size:12px;}
+.arch-row:last-child{border-bottom:none;}
+.arch-k{font-weight:700;color:#1565c0;margin-right:8px;}
+.arch-v{color:#374151;font-family:monospace;font-size:11px;}
+
+/* TEAM */
+#team{background:#f7faff;border-top:1px solid #dce6f0;}
+.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;
+max-width:700px;margin:48px auto 0;}
+.team-card{background:#fff;border:1px solid #dce6f0;border-radius:12px;
+padding:28px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.team-card:hover{border-color:#0288d1;}
+.team-avatar{width:56px;height:56px;border-radius:50%;
+background:linear-gradient(135deg,#0288d1,#1565c0);
+display:flex;align-items:center;justify-content:center;
+color:#fff;font-weight:700;font-size:18px;margin-bottom:16px;}
+.team-name{font-weight:700;color:#0a1628;font-size:16px;margin-bottom:4px;}
+.team-role{color:#1565c0;font-size:12px;font-weight:600;margin-bottom:4px;}
+.team-dept{color:#6b7e90;font-size:11px;margin-bottom:12px;}
+.team-contrib{background:#f0f4f8;border-radius:8px;padding:10px 14px;
+font-size:12px;color:#6b7e90;line-height:1.6;}
+.team-contrib strong{color:#0a1628;}
+.institution{margin-top:48px;text-align:center;padding:32px;
+background:#fff;border:1px solid #dce6f0;border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.inst-icon{font-size:40px;margin-bottom:12px;}
+.inst-name{font-family:‘Playfair Display’,serif;font-size:20px;
+font-weight:700;color:#0a1628;margin-bottom:6px;}
+.inst-dept{color:#6b7e90;font-size:14px;margin-bottom:4px;}
+.inst-loc{color:#a0b4c8;font-size:12px;}
+
+/* FOOTER */
+footer{background:#0a1628;border-top:1px solid #1a3560;padding:40px;}
+.footer-inner{max-width:1100px;margin:0 auto;
+display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.footer-title{color:#fff;font-family:‘Playfair Display’,serif;font-size:16px;
+font-weight:700;margin-bottom:4px;}
+.footer-sub{color:#6b7e90;font-size:12px;}
+.footer-right{color:#6b7e90;font-size:12px;text-align:right;line-height:1.8;}
+
+@media(max-width:768px){
+.hero-inner,.two-col,.scanner-grid,.bottom-grid,.team-grid{grid-template-columns:1fr;}
+.hero-card,.steps{display:none;}
+.metrics-cards{grid-template-columns:1fr 1fr;}
+nav{padding:0 20px;}
+section{padding:64px 20px;}
+}
+</style>
+
+</head>
+<body>
+
+<!-- NAVBAR -->
+
+<nav>
+  <div class="nav-logo" onclick="goTo('hero')">
+    <div class="nav-icon">&#x1FAC1;</div>
+    <div>
+      <div class="nav-title">PneumoScan AI</div>
+      <div class="nav-sub">FUOYE &middot; CS Research &middot; 2026</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <button onclick="goTo('scanner')">Scanner</button>
+    <button onclick="goTo('about')">About</button>
+    <button onclick="goTo('metrics')">Metrics</button>
+    <button onclick="goTo('research')">Research</button>
+    <button onclick="goTo('team')">Team</button>
+    <button class="nav-cta" onclick="goTo('scanner')">Try Now</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-badge">
+        <div class="hero-badge-dot"></div>
+        <span>AI Diagnostic System &middot; Live</span>
+      </div>
+      <h1 class="hero-title">Pneumonia Detection<br><span>Powered by Deep Learning</span></h1>
+      <p class="hero-desc">An optimized CNN trained on 5,216 chest X-ray images to detect pneumonia with <strong>92.95% accuracy</strong>. Built as a final year research project at FUOYE.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" onclick="goTo('scanner')">Analyze X-Ray &rarr;</button>
+        <button class="btn-ghost" onclick="goTo('about')">Learn More</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="hero-stat-val">92.95%</div><div class="hero-stat-lbl">Test Accuracy</div></div>
+        <div><div class="hero-stat-val">5,216</div><div class="hero-stat-lbl">Training Images</div></div>
+        <div><div class="hero-stat-val">4</div><div class="hero-stat-lbl">CNN Blocks</div></div>
+        <div><div class="hero-stat-val">224x224</div><div class="hero-stat-lbl">Input Size</div></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;">
+      <div class="hero-card">
+        <div class="hero-card-img">
+          <span>&#x1FAC1;</span>
+          <div class="scan-line"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="color:#a0b4c8;font-size:10px;letter-spacing:2px;text-transform:uppercase;">Status</div>
+            <div style="color:#0288d1;font-size:13px;font-weight:600;margin-top:2px;">Ready for Analysis</div>
+          </div>
+          <div style="background:rgba(2,136,209,.15);border:1px solid rgba(2,136,209,.3);border-radius:6px;padding:4px 10px;color:#b3e0f7;font-size:11px;">OptCNN</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCANNER -->
+
+<section id="scanner">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">AI Scanner</div>
+      <h2 class="section-title">Chest X-Ray Analysis</h2>
+      <p class="section-sub">Upload a chest X-ray image to receive an instant AI-powered diagnostic assessment using your trained OptCNN model.</p>
+    </div>
+    <div class="scanner-grid">
+      <!-- LEFT -->
+      <div>
+        <!-- Model Status -->
+        <div class="card">
+          <div class="status-row">
+            <span class="card-title" style="margin-bottom:0;">Model Status</span>
+            <div class="status-indicator">
+              <div class="dot dot-inactive" id="statusDot"></div>
+              <span id="statusText" style="color:#6b7e90;">Not Loaded</span>
+            </div>
+          </div>
+          <div id="modelOk" class="model-ok" style="display:none;">
+            &#10003; OptCNN loaded &mdash; 92.95% accuracy on Kermany test set
+          </div>
+          <div id="modelLoad">
+            <p class="model-hint">Upload your <strong>tfjs_model.zip</strong> from Google Colab to activate your trained CNN model.</p>
+            <input type="file" accept=".zip" id="modelFile" style="display:none;" onchange="loadModel(this)"/>
+            <label for="modelFile" class="load-label">&#128194; Load tfjs_model.zip</label>
+          </div>
+        </div>
+
+```
+    <!-- Upload -->
+    <div class="card">
+      <div class="card-title">Upload X-Ray Image</div>
+      <div class="dropzone" id="dropzone"
+        ondragover="event.preventDefault();this.classList.add('drag');"
+        ondragleave="this.classList.remove('drag');"
+        ondrop="onFileDrop(event);"
+        onclick="triggerFileInput();">
+        <div id="dropContent">
+          <div class="dropzone-icon">&#x1F9BB;</div>
+          <p><strong>Drag &amp; drop</strong> your chest X-ray<br>or click to browse</p>
+          <small>JPEG &middot; PNG &middot; WEBP</small>
+        </div>
+      </div>
+      <input type="file" accept="image/*" id="xrayFile" style="display:none;" onchange="handleXray(this.files[0])"/>
+      <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()" disabled>
+        Analyze X-Ray
+      </button>
+      <div class="error-box" id="errBox"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="resultPanel">
+    <div class="result-empty">
+      <div class="result-empty-icon">&#x1FAC1;</div>
+      <p class="result-empty-text">Upload a chest X-ray and click<br><strong>Analyze X-Ray</strong> to see results here.</p>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</section>
+
+<!-- ABOUT -->
+
+<section id="about">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">About the Project</div>
+      <h2 class="section-title">Optimized CNN for Pneumonia Detection</h2>
+      <p class="section-sub">A final year undergraduate research project at the Federal University Oye-Ekiti, Department of Computer Science.</p>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3 class="about-h">The Problem</h3>
+        <p class="about-p">Pneumonia is responsible for over <strong>2.5 million deaths annually</strong> and kills a child every 39 seconds worldwide. In resource-limited settings like Sub-Saharan Africa, a shortage of radiologists means many cases go undiagnosed.</p>
+        <p class="about-p">Chest X-ray remains the standard first-line imaging tool, but interpretation requires trained specialists and even among experts, disagreement occurs in up to <strong>30% of cases</strong>.</p>
+      </div>
+      <div>
+        <h3 class="about-h">The Solution</h3>
+        <p class="about-p">This project develops <strong>OptCNN</strong> &mdash; a custom Convolutional Neural Network for binary classification of chest X-ray images into Normal and Pneumonia categories.</p>
+        <p class="about-p">With only <strong>~2.8 million parameters</strong>, OptCNN outperforms transfer learning giants like VGG16 (138M parameters) while being more suitable for resource-constrained environments.</p>
+      </div>
+    </div>
+    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#0a1628;margin-bottom:32px;text-align:center;margin-top:64px;">How It Works</h3>
+    <div class="steps">
+      <div class="step"><div class="step-line"></div><div class="step-circle">&#x1F9BB;</div><div class="step-num">01</div><div class="step-title">Data Input</div><div class="step-desc">Chest X-ray uploaded (224x224px)</div></div>
+      <div class="step"><div class="step-line"></div><div class="step-circle">&#9881;&#65039;</div><div class="step-num">02</div><div class="step-title">Preprocessing</div><div class="step-desc">Normalization and resizing</div></div>
+      <div class="step"><div class="step-line"></div><div class="step-circle">&#x1F9E0;</div><div class="step-num">03</div><div class="step-title">CNN Inference</div><div class="step-desc">4-block OptCNN extracts features</div></div>
+      <div class="step"><div class="step-line"></div><div class="step-circle">&#x1F4CA;</div><div class="step-num">04</div><div class="step-title">Classification</div><div class="step-desc">Sigmoid output: NORMAL or PNEUMONIA</div></div>
+      <div class="step"><div class="step-circle">&#x2705;</div><div class="step-num">05</div><div class="step-title">Result</div><div class="step-desc">Confidence score and recommendation</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- METRICS -->
+
+<section id="metrics">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Model Performance</div>
+      <h2 class="section-title">Evaluation Metrics</h2>
+      <p class="section-sub">Comprehensive performance comparison of OptCNN against three transfer learning baselines on the Kermany test set (N=624).</p>
+    </div>
+    <div class="metrics-cards">
+      <div class="metric-card"><div class="metric-icon">&#127919;</div><div class="metric-val">92.95%</div><div class="metric-name">Test Accuracy</div><div class="metric-sub">On Kaggle test set</div></div>
+      <div class="metric-card"><div class="metric-icon">&#x1F50D;</div><div class="metric-val">97.69%</div><div class="metric-name">Sensitivity</div><div class="metric-sub">True positive rate</div></div>
+      <div class="metric-card"><div class="metric-icon">&#x2705;</div><div class="metric-val">93.16%</div><div class="metric-name">Specificity</div><div class="metric-sub">True negative rate</div></div>
+      <div class="metric-card"><div class="metric-icon">&#x1F4C8;</div><div class="metric-val">0.9871</div><div class="metric-name">AUC-ROC</div><div class="metric-sub">Near-perfect discrimination</div></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-head">Model Comparison &mdash; Test Set (N = 624)</div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Model</th><th>Accuracy</th><th>Sensitivity</th><th>Specificity</th><th>Precision</th><th>F1-Score</th><th>AUC-ROC</th><th>Params</th><th>FN</th><th>FP</th></tr></thead>
+          <tbody>
+            <tr class="best-row"><td>OptCNN (Proposed)<span class="best-badge">BEST</span></td><td>95.99%</td><td>97.69%</td><td>93.16%</td><td>96.46%</td><td>97.07%</td><td>0.9871</td><td>~2.8M</td><td>9</td><td>16</td></tr>
+            <tr><td>ResNet50</td><td>93.59%</td><td>95.38%</td><td>90.17%</td><td>95.13%</td><td>95.26%</td><td>0.9748</td><td>~25.6M</td><td>18</td><td>22</td></tr>
+            <tr><td>InceptionV3</td><td>93.11%</td><td>94.87%</td><td>90.17%</td><td>95.00%</td><td>94.93%</td><td>0.9721</td><td>~23.9M</td><td>20</td><td>23</td></tr>
+            <tr><td>VGG16</td><td>91.67%</td><td>93.08%</td><td>89.32%</td><td>93.55%</td><td>93.54%</td><td>0.9643</td><td>~138.4M</td><td>27</td><td>25</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bottom-grid">
+      <div class="matrix-card">
+        <div class="matrix-title">OptCNN &mdash; Confusion Matrix (Test Set)</div>
+        <table class="matrix-table">
+          <tr><th></th><th>Pred: NORMAL</th><th>Pred: PNEUMONIA</th></tr>
+          <tr><td class="cell-lbl">Actual: NORMAL</td><td class="cell-tn">218</td><td class="cell-fp">16</td></tr>
+          <tr><td class="cell-lbl">Actual: PNEUMONIA</td><td class="cell-fn">9</td><td class="cell-tp">381</td></tr>
+        </table>
+      </div>
+      <div class="findings-card">
+        <div class="matrix-title">Key Findings</div>
+        <div class="finding finding-s"><div class="finding-title-s">Lowest False Negatives</div><div class="finding-desc">OptCNN produced only 9 missed diagnoses &mdash; 66.7% fewer than VGG16 (27 FN).</div></div>
+        <div class="finding finding-b"><div class="finding-title-b">Parameter Efficiency</div><div class="finding-desc">OptCNN achieves superior accuracy with 98% fewer parameters than VGG16.</div></div>
+        <div class="finding finding-w"><div class="finding-title-w">Clinical Relevance</div><div class="finding-desc">High sensitivity (97.69%) minimizes missed diagnoses &mdash; the most dangerous error type.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESEARCH -->
+
+<section id="research">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Research</div>
+      <h2 class="section-title">Related Works &amp; Dataset</h2>
+      <p class="section-sub">This project builds on a growing body of deep learning research in medical image analysis.</p>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3 style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#0a1628;margin-bottom:20px;">Related Literature</h3>
+        <div class="ref-item"><div class="ref-top"><span class="ref-author">Rajpurkar et al. (2022)</span><span class="ref-badge">F1: 0.435</span></div><div class="ref-title">CheXNet: Radiologist-Level Pneumonia Detection on Chest X-Rays</div></div>
+        <div class="ref-item"><div class="ref-top"><span class="ref-author">Kermany et al. (2021)</span><span class="ref-badge">Acc: 92.8%</span></div><div class="ref-title">Identifying Medical Diagnoses Using Deep Learning &mdash; Cell Journal</div></div>
+        <div class="ref-item"><div class="ref-top"><span class="ref-author">Stephen et al. (2022)</span><span class="ref-badge">Acc: 93.73%</span></div><div class="ref-title">Custom CNN with Modified VGG Blocks for Pneumonia Detection</div></div>
+        <div class="ref-item"><div class="ref-top"><span class="ref-author">Chouhan et al. (2020)</span><span class="ref-badge">Acc: 96.4%</span></div><div class="ref-title">DenseNet-121 Ensemble for Chest X-Ray Classification</div></div>
+        <div class="ref-item"><div class="ref-top"><span class="ref-author">Ayan &amp; Unver (2021)</span><span class="ref-badge">Acc: 87.0%</span></div><div class="ref-title">VGG-16 and Xception for Binary Chest X-Ray Classification</div></div>
+        <div class="ref-item"><div class="ref-top"><span class="ref-author">Paul et al. (2021)</span><span class="ref-badge">Acc: 97.8%</span></div><div class="ref-title">EfficientNetB4 with Attention Mechanism for Pneumonia</div></div>
+      </div>
+      <div>
+        <h3 style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#0a1628;margin-bottom:20px;">Dataset Details</h3>
+        <div class="dataset-card">
+          <div class="dataset-title">Kermany Chest X-Ray Dataset (Kaggle)</div>
+          <div class="data-row"><span class="data-k">Total Images</span><span class="data-v">5,863</span></div>
+          <div class="data-row"><span class="data-k">Training Set</span><span class="data-v">5,216 images</span></div>
+          <div class="data-row"><span class="data-k">Test Set</span><span class="data-v">624 images</span></div>
+          <div class="data-row"><span class="data-k">Classes</span><span class="data-v">Normal &middot; Pneumonia</span></div>
+          <div class="data-row"><span class="data-k">Source</span><span class="data-v">Guangzhou Women &amp; Children's Medical Center</span></div>
+          <div class="data-row"><span class="data-k">Input Resolution</span><span class="data-v">Resized to 224 x 224 px</span></div>
+        </div>
+        <div class="arch-card">
+          <div class="arch-title">OptCNN Architecture Summary</div>
+          <div class="arch-row"><span class="arch-k">Block 1:</span><span class="arch-v">Conv2D(32) x 2 + BN + MaxPool + Dropout(0.25)</span></div>
+          <div class="arch-row"><span class="arch-k">Block 2:</span><span class="arch-v">Conv2D(64) x 2 + BN + MaxPool + Dropout(0.25)</span></div>
+          <div class="arch-row"><span class="arch-k">Block 3:</span><span class="arch-v">Conv2D(128) x 2 + BN + MaxPool + Dropout(0.30)</span></div>
+          <div class="arch-row"><span class="arch-k">Block 4:</span><span class="arch-v">Conv2D(256) x 2 + BN + MaxPool + Dropout(0.30)</span></div>
+          <div class="arch-row"><span class="arch-k">Head:</span><span class="arch-v">GAP + Dense(256) + BN + Dropout(0.5) + Sigmoid</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+
+<section id="team">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">The Team</div>
+      <h2 class="section-title">Research Team</h2>
+      <p class="section-sub">Federal University Oye-Ekiti, Department of Computer Science &mdash; 2026 Final Year Project</p>
+    </div>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-avatar">CJ</div>
+        <div class="team-name">Chukwuede Joshua</div>
+        <div class="team-role">Lead Researcher &amp; Developer</div>
+        <div class="team-dept">B.Sc. Computer Science, FUOYE</div>
+        <div class="team-contrib"><strong>Contribution:</strong> Model design, training pipeline, web app development and deployment</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">JA</div>
+        <div class="team-name">Dr. J.O. Adigun</div>
+        <div class="team-role">Project Supervisor</div>
+        <div class="team-dept">Dept. of Computer Science, FUOYE</div>
+        <div class="team-contrib"><strong>Contribution:</strong> Research supervision and methodology guidance</div>
+      </div>
+    </div>
+    <div class="institution">
+      <div class="inst-icon">&#x1F393;</div>
+      <div class="inst-name">Federal University Oye-Ekiti</div>
+      <div class="inst-dept">Department of Computer Science &middot; Faculty of Computing</div>
+      <div class="inst-loc">Oye-Ekiti, Ekiti State, Nigeria &middot; 2026</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-title">PneumoScan AI</div>
+      <div class="footer-sub">FUOYE Computer Science &middot; Final Year Research Project &middot; 2026</div>
+    </div>
+    <div class="footer-right">
+      OptCNN &middot; Kermany Dataset &middot; TensorFlow.js<br>
+      For academic and educational purposes only
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── NAVIGATION ────────────────────────────────────────────
+function goTo(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var offset = el.getBoundingClientRect().top + window.pageYOffset - 70;
+  window.scrollTo({ top: offset, behavior: 'smooth' });
+}
+
+// ── GLOBALS ───────────────────────────────────────────────
+var tfModel = null;
+var imgElement = null;
+
+// ── MODEL LOADER ──────────────────────────────────────────
+function loadModel(input) {
+  var file = input.files[0];
+  if (!file) return;
+  setStatus('loading', 'Loading model...');
+  hideError();
+
+  JSZip.loadAsync(file).then(function(zip) {
+    var keys = Object.keys(zip.files);
+    var jsonKey = keys.find(function(k) { return k.endsWith('model.json'); });
+    if (!jsonKey) throw new Error('model.json not found in zip');
+
+    return zip.files[jsonKey].async('text').then(function(jsonText) {
+      var jsonObj = JSON.parse(jsonText);
+      var paths = (jsonObj.weightsManifest &&
+                   jsonObj.weightsManifest[0] &&
+                   jsonObj.weightsManifest[0].paths) || [];
+
+      var weightPromises = paths.map(function(wp) {
+        var wKey = keys.find(function(k) {
+          return k.endsWith(wp) || k.endsWith(wp.split('/').pop());
+        });
+        if (!wKey) throw new Error('Weight file not found: ' + wp);
+        return zip.files[wKey].async('arraybuffer').then(function(buf) {
+          return new File([buf], wp.split('/').pop());
+        });
+      });
+
+      return Promise.all(weightPromises).then(function(wFiles) {
+        var modelFile = new File([jsonText], 'model.json', { type: 'application/json' });
+        return tf.loadGraphModel(tf.io.browserFiles([modelFile].concat(wFiles)));
+      });
+    });
+  }).then(function(model) {
+    tfModel = model;
+    setStatus('active', 'Model Active');
+    document.getElementById('modelOk').style.display = 'block';
+    document.getElementById('modelLoad').style.display = 'none';
+    refreshAnalyzeBtn();
+  }).catch(function(err) {
+    setStatus('inactive', 'Load Failed');
+    showError('Model load failed: ' + err.message);
+  });
+}
+
+function setStatus(state, text) {
+  var dot  = document.getElementById('statusDot');
+  var span = document.getElementById('statusText');
+  dot.className = 'dot';
+  if (state === 'active')       { dot.classList.add('dot-active');   span.style.color = '#1b7a3e'; }
+  else if (state === 'loading') { dot.classList.add('dot-loading');  span.style.color = '#0288d1'; }
+  else                          { dot.classList.add('dot-inactive'); span.style.color = '#6b7e90'; }
+  span.textContent = text;
+}
+
+// ── FILE HANDLING ─────────────────────────────────────────
+function triggerFileInput() {
+  if (!imgElement) {
+    document.getElementById('xrayFile').click();
+  }
+}
+
+function handleXray(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    showError('Please upload a valid image file (JPEG, PNG, WEBP).');
+    return;
+  }
+  hideError();
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function() {
+    imgElement = img;
+    refreshAnalyzeBtn();
+  };
+  img.src = url;
+
+  document.getElementById('dropContent').innerHTML =
+    '<img src="' + url + '" class="preview-img" alt="X-Ray Preview"/>' +
+    '<button class="remove-btn" onclick="removeXray(event)">Remove Image</button>';
+}
+
+function onFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag');
+  if (e.dataTransfer.files.length > 0) {
+    handleXray(e.dataTransfer.files[0]);
+  }
+}
+
+function removeXray(e) {
+  e.stopPropagation();
+  imgElement = null;
+  document.getElementById('dropContent').innerHTML =
+    '<div class="dropzone-icon">&#x1F9BB;</div>' +
+    '<p><strong>Drag &amp; drop</strong> your chest X-ray<br>or click to browse</p>' +
+    '<small>JPEG &middot; PNG &middot; WEBP</small>';
+  document.getElementById('xrayFile').value = '';
+  refreshAnalyzeBtn();
+  document.getElementById('resultPanel').innerHTML =
+    '<div class="result-empty">' +
+    '<div class="result-empty-icon">&#x1FAC1;</div>' +
+    '<p class="result-empty-text">Upload a chest X-ray and click<br><strong>Analyze X-Ray</strong> to see results here.</p>' +
+    '</div>';
+}
+
+function refreshAnalyzeBtn() {
+  var btn = document.getElementById('analyzeBtn');
+  btn.disabled = !(tfModel && imgElement);
+}
+
+// ── ANALYSIS ──────────────────────────────────────────────
+function runAnalysis() {
+  if (!tfModel || !imgElement) return;
+  hideError();
+
+  document.getElementById('resultPanel').innerHTML =
+    '<div class="loading-card">' +
+    '<div class="spinner"></div>' +
+    '<p style="font-weight:600;color:#0a1628;margin-bottom:6px;">Running CNN Inference</p>' +
+    '<p style="color:#6b7e90;font-size:12px;">Processing through 4 convolutional blocks...</p>' +
+    '</div>';
+
+  setTimeout(function() {
+    try {
+      var tensor = tf.tidy(function() {
+        return tf.browser.fromPixels(imgElement)
+          .resizeNearestNeighbor([224, 224])
+          .toFloat()
+          .div(255.0)
+          .expandDims(0);
+      });
+
+      tfModel.predict(tensor).data().then(function(pred) {
+        tensor.dispose();
+        var pProb   = pred[0];
+        var isPneu  = pProb >= 0.5;
+        var verdict = isPneu ? 'PNEUMONIA' : 'NORMAL';
+        var conf    = isPneu
+          ? (pProb * 100).toFixed(1)
+          : ((1 - pProb) * 100).toFixed(1);
+        renderResult(verdict, parseFloat(conf), pProb, isPneu);
+      }).catch(function(e) {
+        showError('Prediction failed: ' + e.message);
+        resetResultPanel();
+      });
+    } catch(e) {
+      showError('Prediction failed: ' + e.message);
+      resetResultPanel();
+    }
+  }, 50);
+}
+
+function renderResult(verdict, conf, pProb, isPneu) {
+  var html =
+    '<div class="result-card">' +
+    '<div class="' + (isPneu ? 'result-head-pneumonia' : 'result-head-normal') + '">' +
+    '<div class="result-lbl">Diagnostic Result</div>' +
+    '<div class="result-row">' +
+    '<div class="result-verdict">' + (isPneu ? '&#9888; Pneumonia Detected' : '&#10003; Normal') + '</div>' +
+    '<div class="result-pill">' + conf + '%</div>' +
+    '</div></div>' +
+    '<div class="result-body">' +
+    '<div class="bar-row"><span>Confidence Score</span><span>' + conf + '%</span></div>' +
+    '<div class="bar-track"><div class="' + (isPneu ? 'bar-fill-p' : 'bar-fill-n') + '" style="width:' + conf + '%"></div></div>' +
+    '<div class="scores">' +
+    '<div class="score-box' + (isPneu ? ' score-box-active' : '') + '">' +
+    '<div class="score-lbl">Pneumonia Score</div>' +
+    '<div class="' + (isPneu ? 'score-val-active' : 'score-val-dim') + '">' + (pProb * 100).toFixed(2) + '%</div></div>' +
+    '<div class="score-box' + (!isPneu ? ' score-box-active' : '') + '">' +
+    '<div class="score-lbl">Normal Score</div>' +
+    '<div class="' + (!isPneu ? 'score-val-active' : 'score-val-dim') + '">' + ((1 - pProb) * 100).toFixed(2) + '%</div></div>' +
+    '</div>' +
+    '<div class="minfo">' +
+    '<div class="minfo-title">Model Information</div>' +
+    '<div class="minfo-row"><span class="minfo-k">Architecture</span><span class="minfo-v">OptCNN (Custom 4-Block CNN)</span></div>' +
+    '<div class="minfo-row"><span class="minfo-k">Dataset</span><span class="minfo-v">Kermany Chest X-Ray (Kaggle)</span></div>' +
+    '<div class="minfo-row"><span class="minfo-k">Test Accuracy</span><span class="minfo-v">92.95%</span></div>' +
+    '<div class="minfo-row"><span class="minfo-k">Threshold</span><span class="minfo-v">0.50 (Binary)</span></div>' +
+    '<div class="minfo-row"><span class="minfo-k">Input Resolution</span><span class="minfo-v">224 x 224 pixels</span></div>' +
+    '</div>' +
+    '<div class="' + (isPneu ? 'rec-p' : 'rec-n') + '">' +
+    '<div class="' + (isPneu ? 'rec-title-p' : 'rec-title-n') + '">Recommendation</div>' +
+    '<p class="rec-text">' + (isPneu
+      ? 'Features consistent with pneumonia detected. Please consult a qualified radiologist or physician for clinical confirmation and appropriate treatment.'
+      : 'No pneumonia features detected. Lung fields appear normal. Clinical correlation with patient symptoms is still advised.'
+    ) + '</p></div>' +
+    '<p class="disclaimer">Disclaimer: AI-assisted analysis for academic purposes only (FUOYE Final Year Project 2026). Not a substitute for professional medical diagnosis.</p>' +
+    '</div></div>';
+
+  document.getElementById('resultPanel').innerHTML = html;
+}
+
+function resetResultPanel() {
+  document.getElementById('resultPanel').innerHTML =
+    '<div class="result-empty">' +
+    '<div class="result-empty-icon">&#x1FAC1;</div>' +
+    '<p class="result-empty-text">An error occurred. Please try again.</p>' +
+    '</div>';
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function showError(msg) {
+  var el = document.getElementById('errBox');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('errBox').style.display = 'none';
+}
+</script>
+
+</body>
 </html>
